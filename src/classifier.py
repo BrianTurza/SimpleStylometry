@@ -6,20 +6,26 @@ import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
 from textstat.textstat import textstatistics,legacy_round
+from pathlib import Path
 
 
 class Classifier():
-    def __init__(self, corpus):
-        self.corpus = corpus
+    def __init__(self, corpus, file=True):
         self.output = ""
         self.features = [method for method in dir(Classifier) if not method.startswith('__')] 
+        
+        if file:
+            self.filename = corpus
+            self.corpus = Path(corpus).read_text()
+        else:
+            self.corpus = corpus
     
     def __repr__(self):
         return f"<Classifier Object> : {[i for i in self.features]}"
     
     def word_frequency(self):
         count_words = {}
-        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not in stopwords.words('english') and not word in string.punctuation]
+        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not in stopwords.words('english') and word not in string.punctuation]
 
         for index, word in enumerate(filtered_words):
             if word not in count_words:
@@ -32,7 +38,7 @@ class Classifier():
     def most_common_stopwords(self):
         count_words = {}
         # Words without punctuation
-        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not word in string.punctuation]
+        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not in string.punctuation]
 
         for word in filtered_words:
             if word not in count_words:
@@ -102,10 +108,17 @@ class Classifier():
     def gunnin_for_readability_index(self):
         return 0.4 * (len(word_tokenize(self.corpus)) / len(sent_tokenize(self.corpus)) + 100 * (len(self.complexity_words(self.corpus)) // len(word_tokenize(self.corpus))))
     
-    def plot(self, **features):
-        for feature in features:
-            plt.plot(feature)
-        
+    def plot(self, features, legend):
+        isNested = any(isinstance(i, list) for i in features)
+        line_style = ['solid', 'dotted', 'dashed', 'dashdot']
+        if isNested:
+            for index, feature in enumerate(features):
+                print(feature)
+                plt.plot(feature, linestyle = line_style[index], label=legend[index])
+        else:
+            plt.plot(features)
+
+        plt.legend(loc="upper right")
         plt.show()
 
 def main():
@@ -125,13 +138,30 @@ def main():
     args = parser.parse_args()
 
     if multiple_files:
-        corpus = []
-        for file in inp_file:
-            with open(file, "r+") as f:
-                corpus.append(f.read())
+        word_frequencies = []
+        for corpus in inp_file:
+            classify = Classifier(corpus, file=True)
+
+            print(classify.word_frequency())
+
+            word_frequencies.append([word[1] for word in classify.word_frequency()])
+            
+            print("Average word length:", classify.average_word_length())
+            print("Average sentences length:", classify.average_sentence_length())
+        
+        classify.plot(word_frequencies, legend=['UNABOMBER', 'Hegel'])
+
+            #with open(file, "r+") as f:
+            #    corpus.append(f.read())
     else:
-        with open(inp_file, "r+") as f:
-            corpus = f.read()
+            classify = Classifier(inp_file, file=True)
+
+            #print(classify.word_frequency())
+            
+            print("Average word length:", classify.average_word_length())
+            print("Average sentences length:", classify.average_sentence_length())
+
+            classify.plot([word[1] for word in classify.word_frequency()], legend=['UNABOMBER'])
 
     #classify = Classifier(corpus)
 
