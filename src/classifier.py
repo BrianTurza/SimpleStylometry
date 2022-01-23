@@ -1,6 +1,7 @@
 import argparse
 import string
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -8,8 +9,9 @@ from nltk.corpus import stopwords
 from textstat.textstat import textstatistics,legacy_round
 from pathlib import Path
 
+from features import LexicalFeatures
 
-class Classifier():
+class Classifier(LexicalFeatures):
     def __init__(self, corpus, file=True):
         self.output = ""
         self.features = [method for method in dir(Classifier) if not method.startswith('__')] 
@@ -48,9 +50,12 @@ class Classifier():
 
         return sorted(count_words.items(), key=lambda x: x[1], reverse=True)
     
-    def average_word_length(self):
+    def average_word_length(self, ret_data=False):
         #word_list = utils.removeStopwords(self.corpus)
         word_list = word_tokenize(self.corpus)
+
+        if ret_data:
+            return [len(word) for word in word_list]
 
         # Calculate the mean
         return sum([len(word) for word in word_list]) // len(word_list)
@@ -107,16 +112,28 @@ class Classifier():
     
     def gunnin_for_readability_index(self):
         return 0.4 * (len(word_tokenize(self.corpus)) / len(sent_tokenize(self.corpus)) + 100 * (len(self.complexity_words(self.corpus)) // len(word_tokenize(self.corpus))))
-    
-    def plot(self, features, legend):
+
+    def find_shortest_corpus(self):
+        for word in self.corpus:
+            pass
+
+    def plot(self, features, legend, type_=""):
         isNested = any(isinstance(i, list) for i in features)
         line_style = ['solid', 'dotted', 'dashed', 'dashdot']
+        if type_ == "histogram":
+            sns.displot(features, bins=20)
+            plt.show()
+            return
+
         if isNested:
             for index, feature in enumerate(features):
                 print(feature)
                 plt.plot(feature, linestyle = line_style[index], label=legend[index])
         else:
             plt.plot(features)
+
+        plt.xlabel("Number of words")
+        plt.ylabel("Word length")
 
         plt.legend(loc="upper right")
         plt.show()
@@ -142,12 +159,15 @@ def main():
         for corpus in inp_file:
             classify = Classifier(corpus, file=True)
 
-            print(classify.word_frequency())
+            print(classify.word_frequency()[:30])
 
-            word_frequencies.append([word[1] for word in classify.word_frequency()])
+            word_frequencies.append([word[1] for word in classify.word_frequency()[:50]])
             
             print("Average word length:", classify.average_word_length())
             print("Average sentences length:", classify.average_sentence_length())
+            print(classify.average_word_length(ret_data=True))
+            #classify.plot(classify.average_word_length(ret_data=True), legend=["Word length frequency"], type_="histogram")
+    
         
         classify.plot(word_frequencies, legend=['UNABOMBER', 'Hegel'])
 
@@ -156,7 +176,7 @@ def main():
     else:
             classify = Classifier(inp_file, file=True)
 
-            #print(classify.word_frequency())
+            print(classify.word_frequency()[:30])
             
             print("Average word length:", classify.average_word_length())
             print("Average sentences length:", classify.average_sentence_length())
