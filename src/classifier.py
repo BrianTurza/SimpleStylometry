@@ -1,12 +1,6 @@
 import argparse
-import string
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-import nltk
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
-from textstat.textstat import textstatistics,legacy_round
 from pathlib import Path
 
 from features import LexicalFeatures
@@ -14,7 +8,7 @@ from features import LexicalFeatures
 class Classifier(LexicalFeatures):
     def __init__(self, corpus, file=True):
         self.output = ""
-        self.features = [method for method in dir(Classifier) if not method.startswith('__')] 
+        self.features = [method for method in dir(LexicalFeatures) if not method.startswith('__')] 
         
         if file:
             self.filename = corpus
@@ -25,117 +19,29 @@ class Classifier(LexicalFeatures):
     def __repr__(self):
         return f"<Classifier Object> : {[i for i in self.features]}"
     
-    def word_frequency(self):
-        count_words = {}
-        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not in stopwords.words('english') and word not in string.punctuation]
-
-        for index, word in enumerate(filtered_words):
-            if word not in count_words:
-                count_words[word] = 1
-            else:
-                count_words[word] += 1
-        
-        return sorted(count_words.items(), key=lambda x: x[1], reverse=True)
-    
-    def most_common_stopwords(self):
-        count_words = {}
-        # Words without punctuation
-        filtered_words = [word.lower() for word in word_tokenize(self.corpus) if word.lower() not in string.punctuation]
-
-        for word in filtered_words:
-            if word not in count_words:
-                count_words[word] = 1
-            else:
-                count_words[word] += 1
-
-        return sorted(count_words.items(), key=lambda x: x[1], reverse=True)
-    
-    def average_word_length(self, ret_data=False):
-        #word_list = utils.removeStopwords(self.corpus)
-        word_list = word_tokenize(self.corpus)
-
-        if ret_data:
-            return [len(word) for word in word_list]
-
-        # Calculate the mean
-        return sum([len(word) for word in word_list]) // len(word_list)
-    
-    def average_sentence_length(self):
-        """
-        Number of words n sentence on average
-        """
-        sentences = sent_tokenize(self.corpus) 
-        return sum([len(sentence.split()) for sentence in sentences]) // len(sentences)
-    
-    def character_space(self):
-        return len(self.corpus)
-    
-    def syllables_count(self, word):
-        return textstatistics().syllable_count(word)
-    
-    def complexity_words(self, document):
-        pass
-
-
-    def difficult_words(self, text):
-    
-        words = []
-        sentences = sent_tokenize(self.corpus)
-        for sentence in sentences:
-            words += [str(token) for token in sentence]
-    
-        # difficult words are those with syllables >= 2
-        # easy_word_set is provide by Textstat as
-        # a list of common words
-        diff_words_set = set()
-        
-        for word in words:
-            syllable_count = self.syllables_count(word)
-            if word not in stopwords.words('english') and syllable_count >= 2:
-                diff_words_set.add(word)
-    
-        return len(diff_words_set)
-
-    def poly_syllable_count(self, text):
-        count = 0
-        words = []
-        sentences = sent_tokenize(text)
-        for sentence in sentences:
-            words += [token for token in sentence]
-        
-    
-        for word in words:
-            syllable_count = self.syllables_count(word)
-            if syllable_count >= 3:
-                count += 1
-        return count
-    
-    def gunnin_for_readability_index(self):
-        return 0.4 * (len(word_tokenize(self.corpus)) / len(sent_tokenize(self.corpus)) + 100 * (len(self.complexity_words(self.corpus)) // len(word_tokenize(self.corpus))))
-
-    def find_shortest_corpus(self):
-        for word in self.corpus:
-            pass
-
-    def plot(self, features, legend, type_=""):
-        isNested = any(isinstance(i, list) for i in features)
+    def plot(self, features, type_, legend, **labels):
         line_style = ['solid', 'dotted', 'dashed', 'dashdot']
-        if type_ == "histogram":
-            sns.displot(features, bins=20)
-            plt.show()
-            return
 
-        if isNested:
+        isNested_feature = any(isinstance(i, list) for i in features)
+
+        if isNested_feature:
             for index, feature in enumerate(features):
-                print(feature)
-                plt.plot(feature, linestyle = line_style[index], label=legend[index])
+                if type_ == "plot":
+                    plt.plot(feature, linestyle = line_style[index], label=legend[index])
+                elif type_ == "historgram":
+                    sns.displot(feature, kde = False, bins = 70, color = 'blue')
+                    return
         else:
-            plt.plot(features)
+            if type_ == "plot":
+                plt.plot(features)
+            elif type_ == "historgram":
+                sns.displot(features, kde = False, bins = 70, color = 'blue')
+        
+        if 'x_label' in labels.keys() or 'y_label' in labels.keys():
+            plt.xlabel(labels['x_label'])
+            plt.ylabel(labels['y_label'])
 
-        plt.xlabel("Number of words")
-        plt.ylabel("Word length")
-
-        plt.legend(loc="upper right")
+        plt.legend(loc=labels['location'])
         plt.show()
 
 def main():
@@ -169,7 +75,7 @@ def main():
             #classify.plot(classify.average_word_length(ret_data=True), legend=["Word length frequency"], type_="histogram")
     
         
-        classify.plot(word_frequencies, legend=['UNABOMBER', 'Hegel'])
+        classify.plot(word_frequencies, 'plot', legend=['UNABOMBER', 'Hegel'], x_label='most used words', y_label='number of occurencies', location='upper right')
 
             #with open(file, "r+") as f:
             #    corpus.append(f.read())
